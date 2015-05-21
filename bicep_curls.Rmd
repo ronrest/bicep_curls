@@ -31,7 +31,7 @@ knit_hooks$set(plot = knitr:::hook_plot_html)
 # TIPS
 - use `doParallel`
 - `readRDS()` and `saveRDS()` for caching R objects such as the trained data. 
-- 
+-  use variable Importance `varImp()` function on the trained model. It shows the most important variables. 
 
 ``` {r cacheDownload, echo=FALSE}
 #===============================================================================
