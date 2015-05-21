@@ -141,6 +141,24 @@ raw$classe <- as.factor(raw$classe)
 # qplot(roll_belt, magnet_dumbbell_y, color=classe, data=raw)  
 ```
 
+```{r splitData}
+library(caret)
+set.seed(974)
+inTrain <- createDataPartition(y=raw$classe, p=0.6, list=FALSE)
+trainData <- raw[inTrain,]
+testData <- raw[-inTrain,]
+
+dim(trainData)
+dim(testData)
+miniTrain <- trainData[createDataPartition(y=trainData$classe, p=0.1, list=FALSE), ]
+dim(miniTrain)
+summary(miniTrain$classe)
+```
+
+
+
+
+
 ```{r}
 answers = rep("A", 20)
 #answers = c("A", "B", "A", "C", "A", "B", "A", "C", "A")
