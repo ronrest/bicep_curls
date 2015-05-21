@@ -11,7 +11,7 @@ output: html_document
 library(knitr)
 opts_chunk$set(message = F, error = F, warning = F, comment = NA, 
                fig.align = 'center', dpi = 100, tidy = F, 
-               cache.path = '.cache/', 
+               cache.path = '.cache/', cache=TRUE, 
                fig.path = 'fig/', fig.height=3, fig.width=4)
 
 options(xtable.type = 'html')
@@ -33,7 +33,7 @@ knit_hooks$set(plot = knitr:::hook_plot_html)
 - `readRDS()` and `saveRDS()` for caching R objects such as the trained data. 
 - 
 
-``` {r getData, echo=FALSE, cache=TRUE}
+``` {r cacheDownload, echo=FALSE}
 #===============================================================================
 #                                                                 CACHE DOWNLOAD
 #===============================================================================
