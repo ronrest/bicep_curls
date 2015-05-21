@@ -97,6 +97,21 @@ raw = read.csv("data/trainData", na.strings=c("NA", "#DIV/0!"), stringsAsFactors
 newdata = read.csv("data/testData", na.strings=c("NA", "#DIV/0!"), stringsAsFactors = FALSE)
 ```
 
+```{r summary, dependson="loadData"}
+#library(fancyprint)
+
+# TODO: remove the detach line
+#detach("package:stat.convenience", unload=TRUE)
+library(stat.convenience)
+na.summary(raw, only.nas=TRUE)
+#na.summary(test, only.nas=TRUE)
+```
+We can see from the the summary of NAs, that out of the columns that do contain 
+NAs, they contain quite a lot of them, 19216 of them as a minimum. This is a 
+minimum of `r round(100*19216 / nrow(train), digits=2)` % of the rows. Which 
+means it is not really worth keeping those columns in the dataset, so we keep a 
+subset of the columns that dont have any NAs. 
+
 
 
 
