@@ -112,6 +112,22 @@ minimum of `r round(100*19216 / nrow(train), digits=2)` % of the rows. Which
 means it is not really worth keeping those columns in the dataset, so we keep a 
 subset of the columns that dont have any NAs. 
 
+```{r filterColumns, dependson="loadData"}
+# Filter out columns with all the NAs in it
+column_filter <- na.summary(raw, only.nas=TRUE)
+
+# Filter out aditional columns that are not useful for prediction
+column_filter <- c(column_filter, "X", "user_name", "raw_timestamp_part_1", 
+                   "raw_timestamp_part_2", "cvtd_timestamp", "new_window", 
+                   "num_window")
+
+# Filter out the columns in the filter
+raw <- filter.columns(raw, column_filter, method="list", exclude=TRUE)
+newdata <- filter.columns(newdata, column_filter, method="list", exclude=TRUE)
+
+# Conver the class column to factor type
+raw$classe <- as.factor(raw$classe)
+```
 
 
 
