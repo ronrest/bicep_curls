@@ -1,0 +1,7 @@
+---
+title: "Bicep Curls"
+author: "Ronny Restrepo"
+date: "21/05/2015"
+output: html_document
+---
+
