@@ -160,22 +160,21 @@ summary(miniTrain$classe)
 
 
 ```{r}
-answers = rep("A", 20)
+#answers = rep("A", 20)
 #answers = c("A", "B", "A", "C", "A", "B", "A", "C", "A")
 
-#then you can load this function by copying and pasting it into R:
- 
-pml_write_files = function(x){
-  n = length(x)
-  for(i in 1:n){
-    filename = paste0("answers/","problem_id_",i,".txt")
-    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
-  }
-}
-#then create a folder where you want the files to be written. 
-# Set that to be your working directory and run:
- 
-pml_write_files(answers)
+#then you can load this function by copying and pasting it into R: 
+# pml_write_files = function(x){
+#   n = length(x)
+#   for(i in 1:n){
+#     filename = paste0("answers/","problem_id_",i,".txt")
+#     write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+#   }
+# }
+# #then create a folder where you want the files to be written. 
+# # Set that to be your working directory and run:
+#  
+# pml_write_files(answers)
 ```
 
 
