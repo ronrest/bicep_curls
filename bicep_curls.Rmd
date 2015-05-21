@@ -31,3 +31,53 @@ knit_hooks$set(plot = knitr:::hook_plot_html)
 # TIPS
 - use `doParallel`
 - `readRDS()` and `saveRDS()` for caching R objects such as the trained data. 
+- 
+
+``` {r getData, echo=FALSE, cache=TRUE}
+#===============================================================================
+#                                                                 CACHE DOWNLOAD
+#===============================================================================
+#' cacheDownload.csv 
+#' 
+#' Downloads a csv file from the internet, and caches it locally. 
+#' 
+#' Something
+#' 
+#' @param url (string) the URL to download from
+#' @param dataDirectory (string) The directory where the local data will be 
+#'        stored in
+#' @param fileNameLocal (string) The name you want the file to be called locally
+#' 
+cacheDownload.csv <- function(url, dataDirectory, fileNameLocal){
+    # TODO: include option to override existing local file, eg, if there may be 
+    #       reason to believe that the data has changed. 
+    
+    localPathToFile = paste(dataDirectory, fileNameLocal, sep="/")
+    
+    #---------------------------------------------------------------------------
+    #                     Create a new data directory if it doesnt already exist
+    #---------------------------------------------------------------------------
+    if(!file.exists(dataDirectory)){
+        message("Creating a new data directory '", dataDirectory, "'")
+        dir.create(dataDirectory)
+    }
+     
+    #---------------------------------------------------------------------------
+    #                   Download a CSV file if it hasn't already been downloaded
+    #---------------------------------------------------------------------------
+    if(file.exists(localPathToFile)){
+        dateDownloaded <- NA    # TODO: Load a datestamp from a file, so that it
+                                # can be loaded up on start up
+        message("Using existing ", localPathToFile, " file downloaded on ",
+                dateDownloaded)
+    } else {
+        message("Downloading and saving data as ", dataFileLocal)
+        download.file(fileURL, destfile=localPathToFile, method="curl")
+        # Create a datestamp of the time the download was made
+        dateDownloaded <- date()
+        message("Download made on ", dateDownloaded)
+        message("TODO: save the datestamp as a file, so it can be loaded up next",
+                "time the script is run")
+    }
+}
+```
