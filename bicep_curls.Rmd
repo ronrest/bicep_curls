@@ -37,9 +37,9 @@ knit_hooks$set(plot = knitr:::hook_plot_html)
 #===============================================================================
 #                                                                 CACHE DOWNLOAD
 #===============================================================================
-#' cacheDownload.csv 
+#' cacheDownload
 #' 
-#' Downloads a csv file from the internet, and caches it locally. 
+#' Downloads a file from the internet, and caches it locally. 
 #' 
 #' Something
 #' 
@@ -48,7 +48,7 @@ knit_hooks$set(plot = knitr:::hook_plot_html)
 #'        stored in
 #' @param fileNameLocal (string) The name you want the file to be called locally
 #' 
-cacheDownload.csv <- function(url, dataDirectory, fileNameLocal){
+cacheDownload <- function(url, dataDirectory, fileNameLocal){
     # TODO: include option to override existing local file, eg, if there may be 
     #       reason to believe that the data has changed. 
     
@@ -71,8 +71,8 @@ cacheDownload.csv <- function(url, dataDirectory, fileNameLocal){
         message("Using existing ", localPathToFile, " file downloaded on ",
                 dateDownloaded)
     } else {
-        message("Downloading and saving data as ", dataFileLocal)
-        download.file(fileURL, destfile=localPathToFile, method="curl")
+        message("Downloading and saving data as ", localPathToFile)
+        download.file(url, destfile=localPathToFile, method="curl")
         # Create a datestamp of the time the download was made
         dateDownloaded <- date()
         message("Download made on ", dateDownloaded)
@@ -86,8 +86,8 @@ cacheDownload.csv <- function(url, dataDirectory, fileNameLocal){
 trainURL = "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
 testURL = "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
 
-cacheDownload.csv(trainURL, "data", "trainData")
-cacheDownload.csv(testURL, "data", "testData")
+cacheDownload(trainURL, "data", "trainData")
+cacheDownload(testURL, "data", "testData")
 ```
 
 
@@ -113,4 +113,5 @@ pml_write_files = function(x){
  
 pml_write_files(answers)
 ```
+
 
