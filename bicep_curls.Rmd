@@ -82,7 +82,8 @@ cacheDownload <- function(url, dataDirectory, fileNameLocal){
 }
 ```
 
-```{r}
+```{r getData, dependson="cacheDownload"}
+# TODO: rename these files
 trainURL = "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
 testURL = "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
 
