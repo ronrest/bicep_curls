@@ -130,6 +130,16 @@ raw$classe <- as.factor(raw$classe)
 ```
 
 
+``` {r exploratoryPlots, dependson="filterColumns"}
+#library(ggplot2)
+#qplot(pitch_forearm, roll_forearm, color=classe, data=raw)
+# qplot(yaw_belt, roll_belt, color=classe, data=raw)
+# qplot(yaw_belt, magnet_dumbbell_z, color=classe, data=raw)
+# qplot(yaw_belt, magnet_dumbbell_y, color=classe, data=raw)  
+# qplot(magnet_dumbbell_z, magnet_dumbbell_y, color=classe, data=raw)
+# qplot(roll_belt, magnet_dumbbell_z, color=classe, data=raw)
+# qplot(roll_belt, magnet_dumbbell_y, color=classe, data=raw)  
+```
 
 ```{r}
 answers = rep("A", 20)
