@@ -92,6 +92,10 @@ cacheDownload(testURL, "data", "testData")
 ```
 
 
+``` {r loadData, dependson="getData"}
+raw = read.csv("data/trainData", na.strings=c("NA", "#DIV/0!"), stringsAsFactors = FALSE)
+newdata = read.csv("data/testData", na.strings=c("NA", "#DIV/0!"), stringsAsFactors = FALSE)
+```
 
 
 
