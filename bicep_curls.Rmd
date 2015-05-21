@@ -81,3 +81,11 @@ cacheDownload.csv <- function(url, dataDirectory, fileNameLocal){
     }
 }
 ```
+
+```{r}
+trainURL = "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+testURL = "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+
+cacheDownload.csv(trainURL, "data", "trainData")
+cacheDownload.csv(testURL, "data", "testData")
+```
