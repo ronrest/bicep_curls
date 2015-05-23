@@ -29,71 +29,33 @@ knit_hooks$set(plot = knitr:::hook_plot_html)
 
 
 # TIPS
-- use `doParallel`
 - `readRDS()` and `saveRDS()` for caching R objects such as the trained data. 
 -  use variable Importance `varImp()` function on the trained model. It shows the most important variables. 
 - Use `myModel$results` for a summary of accuracy results
 
-``` {r cacheDownload, echo=FALSE}
-#===============================================================================
-#                                                                 CACHE DOWNLOAD
-#===============================================================================
-#' cacheDownload
-#' 
-#' Downloads a file from the internet, and caches it locally. 
-#' 
-#' Something
-#' 
-#' @param url (string) the URL to download from
-#' @param dataDirectory (string) The directory where the local data will be 
-#'        stored in
-#' @param fileNameLocal (string) The name you want the file to be called locally
-#' 
-cacheDownload <- function(url, dataDirectory, fileNameLocal){
-    # TODO: include option to override existing local file, eg, if there may be 
-    #       reason to believe that the data has changed. 
-    
-    localPathToFile = paste(dataDirectory, fileNameLocal, sep="/")
-    
-    #---------------------------------------------------------------------------
-    #                     Create a new data directory if it doesnt already exist
-    #---------------------------------------------------------------------------
-    if(!file.exists(dataDirectory)){
-        message("Creating a new data directory '", dataDirectory, "'")
-        dir.create(dataDirectory)
-    }
-     
-    #---------------------------------------------------------------------------
-    #                   Download a CSV file if it hasn't already been downloaded
-    #---------------------------------------------------------------------------
-    if(file.exists(localPathToFile)){
-        dateDownloaded <- NA    # TODO: Load a datestamp from a file, so that it
-                                # can be loaded up on start up
-        message("Using existing ", localPathToFile, " file downloaded on ",
-                dateDownloaded)
-    } else {
-        message("Downloading and saving data as ", localPathToFile)
-        download.file(url, destfile=localPathToFile, method="curl")
-        # Create a datestamp of the time the download was made
-        dateDownloaded <- date()
-        message("Download made on ", dateDownloaded)
-        message("TODO: save the datestamp as a file, so it can be loaded up next",
-                "time the script is run")
-    }
-}
-#===============================================================================
+```{r conveniencelibs}
+#Uncomment the following lines if you want to install 
+#   file.convenience package
+#   stat.convenience package
+#   fancyprint       package
+#library(devtools)
+#TODO: XXXX install from github code
+
+#library(file.convenience)
+#library(stat.convenience)
+
 ```
 
-```{r getData, dependson="cacheDownload"}
+```{r getData, dependson=conveniencelibs}
 #===============================================================================
-#                                                                       GET DATA
+#                                                        DOWNLOAD AND CACHE DATA
 #===============================================================================
-# TODO: rename these files
 trainURL = "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
-testURL = "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+predictURL = "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
 
-cacheDownload(trainURL, "data", "trainData")
-cacheDownload(testURL, "data", "testData")
+library(file.convenience)        # Not in CRAN, see Appendix to get this package
+cacheDownload(trainURL, dataDir="data", localName="trainData")
+cacheDownload(predictURL, dataDir="data", localName="predictionData")
 ```
 
 
@@ -101,62 +63,66 @@ cacheDownload(testURL, "data", "testData")
 #===============================================================================
 #                                                                      LOAD DATA
 #===============================================================================
-raw = read.csv("data/trainData", na.strings=c("NA", "#DIV/0!"), stringsAsFactors = FALSE)
-newdata = read.csv("data/testData", na.strings=c("NA", "#DIV/0!"), stringsAsFactors = FALSE)
+na.strings = c("NA", "#DIV/0!")
+rawData = read.csv("data/trainData", na.strings=na.strings, stringsAsFactors=FALSE)
+predictData = read.csv("data/predictionData", na.strings=na.strings, 
+                   stringsAsFactors=FALSE)
 ```
 
 ```{r summary, dependson="loadData"}
 #===============================================================================
 #                                                                       SUMMARY
 #===============================================================================
-#library(fancyprint)
-
 # TODO: remove the detach line
 #detach("package:stat.convenience", unload=TRUE)
-library(stat.convenience)
-na.summary(raw, only.nas=TRUE)
+library(fancyprint)              # Not in CRAN, see Appendix to get this package
+library(stat.convenience)        # Not in CRAN, see Appendix to get this package
+na.info = na.summary(rawData, only.nas=TRUE)
+nrow(na.info)
+
 #na.summary(test, only.nas=TRUE)
 ```
-We can see from the the summary of NAs, that out of the columns that do contain 
-NAs, they contain quite a lot of them, 19216 of them as a minimum. This is a 
-minimum of `r round(100*19216 / nrow(train), digits=2)` % of the rows. Which 
-means it is not really worth keeping those columns in the dataset, so we keep a 
-subset of the columns that dont have any NAs. 
+
+We can see from the the summary of NAs, that there are 100 columns with NAs. Out 
+of those columns, the proportion of NAs range from  
+`r round(min(na.info$proportion) * 100, digits=2)`% to 
+`r round(max(na.info$proportion) * 100, digits=2)`% of the rows. This means it 
+is not really worth keeping those columns in the dataset, so we keep a subset of 
+the columns that dont have any NAs. 
+
+There are some aditional columns that are not much use to us as predictor 
+variables, so they are filtered also. 
 
 ```{r filterColumns, dependson="loadData"}
 #===============================================================================
 #                                                                 FILTER COLUMNS
 #===============================================================================
-# Filter out columns with all the NAs in it
-column_filter <- na.summary(raw, only.nas=TRUE)
+# Create filter of columns with the NAs
+column_filter <- na.info$colName
 
-# Filter out aditional columns that are not useful for prediction
+# Filter includes aditional columns that are not useful for prediction
 column_filter <- c(column_filter, "X", "user_name", "raw_timestamp_part_1", 
                    "raw_timestamp_part_2", "cvtd_timestamp", "new_window", 
                    "num_window")
 
-# Filter out the columns in the filter
-raw <- filter.columns(raw, column_filter, method="list", exclude=TRUE)
-newdata <- filter.columns(newdata, column_filter, method="list", exclude=TRUE)
+# Actually filter out the columns using the filter
+# filter.columns() is in the stat.convenience package
+cleanData <- filter.columns(rawData, column_filter, method="list", exclude=TRUE)
+predictData <- filter.columns(predictData, column_filter, method="list", exclude=TRUE)
 
-# Conver the class column to factor type
-raw$classe <- as.factor(raw$classe)
+# Convert the class column to factor type
+cleanData$classe <- as.factor(cleanData$classe)
 ```
 
+What we end up with is `r ncol(cleanData)` columns. `r ncol(cleanData) - 1` of 
+them to be used as predictor variables, and the column labelled `classe` 
+provides the labels to be used in training the learning algorithm. 
 
-``` {r exploratoryPlots, dependson="filterColumns"}
-#===============================================================================
-#                                                              EXPLORATORY PLOTS
-#===============================================================================
-# library(ggplot2)
-# qplot(pitch_forearm, roll_forearm, color=classe, data=raw)
-# qplot(yaw_belt, roll_belt, color=classe, data=raw)
-# qplot(yaw_belt, magnet_dumbbell_z, color=classe, data=raw)
-# qplot(yaw_belt, magnet_dumbbell_y, color=classe, data=raw)  
-# qplot(magnet_dumbbell_z, magnet_dumbbell_y, color=classe, data=raw)
-# qplot(roll_belt, magnet_dumbbell_z, color=classe, data=raw)
-# qplot(roll_belt, magnet_dumbbell_y, color=classe, data=raw)  
-```
+Now that the data has been cleaned up a bit, we can split the data into a 
+training and test set. 60% of the data is assigned to the training set, and 40% 
+to the test set. 
+
+
 
 ```{r splitData}
 #===============================================================================
@@ -164,400 +130,23 @@ raw$classe <- as.factor(raw$classe)
 #===============================================================================
 library(caret)
 set.seed(974)
-inTrain <- createDataPartition(y=raw$classe, p=0.6, list=FALSE)
-trainData <- raw[inTrain,]
-testData <- raw[-inTrain,]
-
-dim(trainData)
-dim(testData)
-miniTrain <- trainData[createDataPartition(y=trainData$classe, p=0.1, list=FALSE), ]
-miniTrain2 <- trainData[createDataPartition(y=trainData$classe, p=0.2, list=FALSE), ]
-miniTrain4 <- trainData[createDataPartition(y=trainData$classe, p=0.4, list=FALSE), ]
-
-dim(miniTrain)
-dim(miniTrain2)
-dim(miniTrain4)
-
-summary(miniTrain$classe)
-
-#qplot(pitch_forearm, roll_forearm, color=classe, data=miniTrain)
+inTrain <- createDataPartition(y=cleanData$classe, p=0.6, list=FALSE)
+trainData <- cleanData[inTrain,]
+testData <- cleanData[-inTrain,]
 ```
 
-
+Now we can train the learning algorithm. 
 
 ```{r}
 #===============================================================================
 #                                                                     TRAIN DATA
 #===============================================================================
-library(RevoUtilsMath)
-setMKLthreads(8)
+#Uncomment to set number of cores in Revolution R
+#library(RevoUtilsMath)
+#setMKLthreads(2)
 
 #install.packages("doParallel")
 library(doParallel)
-
-
-# using 8 cores gives best performance.
-# 7 very close performance to 8
-# 6 does not improve upon 4, its sometimes worse than 4. 
-# 4 is pretty good. 
-registerDoParallel(cores=8)
-#   , cores=1      elapsed = 121.030
-#  2, cores=2      elapsed =  65.713
-#   , cores=4      elapsed =  36.921 
-#  4, cores=4      elapsed =  36.921 
-#  6, cores=6      elapsed =  38.589 
-#   , cores=6      elapsed =  35.451 - 41.780
-#   , cores=8      elapsed =  29.716
-#  4, cores=8      elapsed =  41.284
-#  8, cores=8      elapsed =  29.897
-#   , cores=7      elapsed =  30.703
-# 16, cores=16     elapsed =  235.036   # Computer froze during most of that time. 
-library("gbm")
-system.time({
-    modFit <- train(classe ~ ., method="gbm", data=miniTrain, verbose=FALSE)
-})
-print(modFit)
-# 0.6953714 - 0.8623236
-
-
-
-
-
-#=========================================================================
-#                                           gbm, center&scale, bootstrap25
-#                                                                      
-library("gbm")
-registerDoParallel(cores=8)
-# cores=8     miniTrain  elapsed=   28.429
-# cores=2     miniTrain2 elapsed=   55.993
-system.time({
-    tc <- trainControl(method="boot", number=25, allowParallel=TRUE)
-    modFit3 <- train(classe ~ ., method="gbm", verbose=FALSE,
-                    preProcess=c("center","scale"), trControl=tc, 
-                    data=miniTrain)
-})
-print(modFit3)
-# miniTrain    preprocess= center,scale  Accuracy   0.6998995  - 0.8681642
-# miniTrain2   preprocess= center,scale  Accuracy   0.7319601  - 0.9131517
-
-#=========================================================================
-
-#=========================================================================
-#                                    gbm, noPreProcess, repeatedcv n10, r3
-#                                                                      
-library("gbm")
-registerDoParallel(cores=2)
-# cores=8     miniTrain  elapsed=    29.048
-# cores=2     miniTrain2 elapsed=    58.357 , 75.837 
-# cores=4     miniTrain2 elapsed=    99.867
-# cores=2     miniTrain4 elapsed=   259.366
-system.time({
-    tc <- trainControl(method="repeatedcv", number=10, repeats=3)
-    modFit3 <- train(classe ~ ., method="gbm", verbose=FALSE,
-                    trControl=tc, 
-                    data=miniTrain4)
-})
-print(modFit3)
-# miniTrain    preprocess= center,scale  Accuracy   0.7241157 -  0.8934642
-# miniTrain2   preprocess= center,scale  Accuracy   0.7456280  - 0.9287154
-# miniTrain4   preprocess= center,scale  Accuracy   0.7463983  - 0.9470933
-
-
-#=========================================================================
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#=========================================================================
-#                                                   Random Forrest 25, PCA 
-registerDoParallel(cores=4)
-# cores=4     miniTrain   elapsed= 71.578
-# cores=8     miniTrain   elapsed= 55.127
-# cores=8     miniTrain2  elapsed= 157.311
-# cores=4     miniTrain4  elapsed= 634.487
-# cores=8     miniTrain4  elapsed= 1395.751
-system.time({
-    modFit3 <- train(classe ~ ., method="rf", prox=TRUE, preProcess="pca", data=miniTrain4)
-})
-print(modFit3)
-# miniTrain    preprocess= pca  Accuracy   0.7359293 -  0.7009204
-# miniTrain2   preprocess= pca  Accuracy   0.8425614 -  0.8059264
-# miniTrain4   preprocess= pca  Accuracy   0.8958852 -  0.8742713
-
-#modFit_rf_25_pca_minitrain4 <- modFit3
-#saveRDS(modFit_rf_25_pca_minitrain4, "modFit_rf_25_pca_minitrain4.rds")
-#=========================================================================
-
-#=========================================================================
-#                                         Random Forrest 25, no preprocess 
-registerDoParallel(cores=8)
-# cores=8     miniTrain  elapsed=  68.663
-# cores=8     miniTrain2 elapsed= 330.807
-system.time({
-    modFit3 <- train(classe ~ ., method="rf", prox=TRUE, data=miniTrain2)
-})
-print(modFit3)
-# miniTrain    preprocess= NA  Accuracy   0.8756334 -  0.8706670
-# miniTrain2   preprocess= NA  Accuracy   0.9325219 -  0.9261101
-
-#saveRDS(modFit3, "modFit_rf_25_noPreproc_minitrain2.rds")
-#=========================================================================
-
-
-#=========================================================================
-#                                          Random Forrest 25, center&scale 
-registerDoParallel(cores=8)
-# cores=8     miniTrain  elapsed=   69.130
-# cores=8     miniTrain2 elapsed=  193.998
-system.time({
-    modFit3 <- train(classe ~ ., method="rf", 
-                     preProcess=c("center","scale"), 
-                     prox=TRUE, data=miniTrain2)
-})
-print(modFit3)
-# miniTrain    preprocess= center,scale  Accuracy   0.8766283 -  0.8690852
-# miniTrain2   preprocess= center,scale  Accuracy   0.9275617 -  0.9218616
-
-#saveRDS(modFit3, "modFit_rf_25_centreScale_minitrain2.rds")
-#=========================================================================
-
-
-
-#=========================================================================
-#                                          Random Forrest 25, "BoxCox" 
-
-# DONT USE BOXCOX, throws errors and takes like 10 minutes for miniTrain
-#=========================================================================
-
-
-
-
-
-
-
-#=========================================================================
-#                               Random Forrest 25, center&scale, bootstrap
-#                                                                      OK
-registerDoParallel(cores=3)
-# cores=8     miniTrain  elapsed=   70.955
-# cores=2     miniTrain2 elapsed=  396.813
-system.time({
-    tc <- trainControl(method="boot", number=25, allowParallel=TRUE)
-    modFit3 <- train(classe ~ ., method="rf", prox=TRUE, 
-                     preProcess=c("center","scale"), trControl=tc, 
-                     data=miniTrain2)
-})
-print(modFit3)
-# miniTrain    preprocess= center,scale  Accuracy   0.8709568  -  0.8659106
-# miniTrain2   preprocess= center,scale  Accuracy   0.9244866 -   0.9288476
-
-#=========================================================================
-
-
-#=========================================================================
-#                               Random Forrest 100, center&scale, bootstrap
-#                                             TOO SLOW, NOT ENOUGH ACCURACY
-registerDoParallel(cores=8)
-# cores=8     miniTrain  elapsed=   273.763
-# cores=8     miniTrain2 elapsed=  
-system.time({
-    tc <- trainControl(method="boot", number=100, allowParallel=TRUE)
-    modFit3 <- train(classe ~ ., method="rf", prox=TRUE, 
-                     preProcess=c("center","scale"), trControl=tc, 
-                     data=miniTrain)
-})
-print(modFit3)
-# miniTrain    preprocess= center,scale  Accuracy   0.8739487  -  0.8661013
-# miniTrain2   preprocess= center,scale  Accuracy   
-
-#=========================================================================
-
-
-
-#=========================================================================
-#                      Random Forrest 25, center&scale, repeatedcv n10, r3
-
-registerDoParallel(cores=8)
-# cores=8     miniTrain  elapsed=   77.471
-# cores=8     miniTrain2 elapsed=  203.801
-system.time({
-    tc <- trainControl(method="repeatedcv", number=10, repeats=3)
-    modFit3 <- train(classe ~ ., method="rf", prox=TRUE, 
-                     preProcess=c("center","scale"), trControl=tc, 
-                     data=miniTrain2)
-})
-print(modFit3)
-# miniTrain    preprocess= center,scale  Accuracy   0.8996508  - 0.9089277
-# miniTrain2   preprocess= center,scale  Accuracy   0.9470743  - 0.9548542
-
-#saveRDS(modFit3, "modFit_rf_25_centreScale_repeatedcv_n10_r3_minitrain2.rds")
-#=========================================================================
-
-
-
-
-#=========================================================================
-#                      Random Forrest 25, center&scale, repeatedcv n30, r3
-#                           Only slightly beter accuracy, but WAY TOO SLOW
-registerDoParallel(cores=8)
-# cores=8     miniTrain  elapsed=   235.657
-# cores=8     miniTrain2 elapsed=  
-system.time({
-    tc <- trainControl(method="repeatedcv", number=30, repeats=3)
-    modFit3 <- train(classe ~ ., method="rf", prox=TRUE, 
-                     preProcess=c("center","scale"), trControl=tc, 
-                     data=miniTrain)
-})
-print(modFit3)
-# miniTrain    preprocess= center,scale  Accuracy   0.9065102  - 0.9124302
-# miniTrain2   preprocess= center,scale  Accuracy   
-
-#=========================================================================
-
-
-
-#=========================================================================
-#                      Random Forrest 25, center&scale, repeatedcv n10, r6
-#                               Only slightly beter accuracy, but TOO SLOW
-registerDoParallel(cores=8)
-# cores=8     miniTrain  elapsed=   140.759
-# cores=8     miniTrain2 elapsed=  
-system.time({
-    tc <- trainControl(method="repeatedcv", number=10, repeats=6)
-    modFit3 <- train(classe ~ ., method="rf", prox=TRUE, 
-                     preProcess=c("center","scale"), trControl=tc, 
-                     data=miniTrain)
-})
-print(modFit3)
-# miniTrain    preprocess= center,scale  Accuracy   0.8994909 - 0.9073915
-# miniTrain2   preprocess= center,scale  Accuracy   
-
-#=========================================================================
-
-
-#=========================================================================
-#                      Random Forrest center&scale, repeatedcv n5, r3
-#                                                  FAST AND ACCURATE *****
-registerDoParallel(cores=8)
-# cores=8     miniTrain  elapsed=  34.594 
-# cores=8     miniTrain2 elapsed=  92.598
-system.time({
-    tc <- trainControl(method="repeatedcv", number=5, repeats=3)
-    modFit3 <- train(classe ~ ., method="rf", prox=TRUE, 
-                     preProcess=c("center","scale"), trControl=tc, 
-                     data=miniTrain2)
-})
-print(modFit3)
-# miniTrain    preprocess= center,scale  Accuracy    0.8900014  - 0.8976703
-# miniTrain2   preprocess= center,scale  Accuracy    0.9432768  - 0.9493680
-
-#saveRDS(modFit3, "modFit_rf_centreScale_repeatedcv_n5_r3_minitrain2.rds")
-#=========================================================================
-
-
-#=========================================================================
-#                      Random Forrest center&scale, repeatedcv n5, r6
-#                                                               OKish
-registerDoParallel(cores=8)
-# cores=8     miniTrain  elapsed=  62.759
-# cores=8     miniTrain2 elapsed=  170.704
-system.time({
-    tc <- trainControl(method="repeatedcv", number=5, repeats=6)
-    modFit3 <- train(classe ~ ., method="rf", prox=TRUE, 
-                     preProcess=c("center","scale"), trControl=tc, 
-                     data=miniTrain2)
-})
-print(modFit3)
-# miniTrain    preprocess= center,scale  Accuracy    0.8924149  - 0.9027253
-# miniTrain2   preprocess= center,scale  Accuracy    0.9442537  - 0.9475105
-#=========================================================================
-
-
-
-
-
-
-
-install.packages("adabag")
-library("adabag")
-#=========================================================================
-#                                 adabag,  center&scale, repeatedcv n=5, r=3
-#                                                                    AWFUL
-registerDoParallel(cores=8)
-# cores=8     miniTrain  elapsed=  576.345 
-# cores=8     miniTrain2 elapsed=  
-system.time({
-    tc <- trainControl(method="boot", number=25)
-    modFit3 <- train(classe ~ ., method="AdaBag", 
-                     preProcess=c("center","scale"), trControl=tc, 
-                     data=miniTrain)
-})
-print(modFit3)
-# miniTrain    preprocess= center,scale  Accuracy    0.3713974 - 0.4261560
-# miniTrain2   preprocess= center,scale  Accuracy    
-
-#saveRDS(modFit3, "modFit_rf_centreScale_repeatedcv_n5_r3_minitrain2.rds")
-#=========================================================================
-
-
-
-#=========================================================================
-#                         AdaBoost.M1,  center&scale, repeatedcv n=5, r=3
-#                                                           AWFULLLY SLOW
-registerDoParallel(cores=8)
-# cores=8     miniTrain  elapsed=  1745.391
-# cores=8     miniTrain2 elapsed=  
-system.time({
-    #tc <- trainControl(method="boot", number=25)
-    modFit3 <- train(classe ~ ., method="AdaBoost.M1", 
-                     preProcess=c("center","scale"),  
-                     data=miniTrain)
-})
-print(modFit3)
-# miniTrain    preprocess= center,scale  Accuracy          - 0.8307913
-# miniTrain2   preprocess= center,scale  Accuracy    
-
-#saveRDS(modFit3, "modFit_rf_centreScale_repeatedcv_n5_r3_minitrain2.rds")
-#=========================================================================
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
