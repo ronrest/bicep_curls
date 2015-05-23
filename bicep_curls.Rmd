@@ -228,7 +228,111 @@ print(modFit3)
 
 
 
+
+
+#myfile = cacheprocess("filename", funct, ...)
+
+
+
+
+
+
+#-------------------------------------------------------------------------------
+#                                                RANDOM FORREST NO PREPROCESSING
+#-------------------------------------------------------------------------------
+# Accuracy    0.9907160
+# Kappa       0.9882559
+rf_rcv_nopp = readRDS("trained_objects/modFit_rf_noPreproc_repeatedCv_n10_r3_trainData.rds")
+
+rf_rcv_nopp$finalModel
+
+
+#-------------------------------------------------------------------------------
+#                                                    RANDOM FORREST CENTER SCALE
+#-------------------------------------------------------------------------------
+# Accuracy   0.9905175
+# Kappa      0.9880041
+rf_rcv_normalize = readRDS("trained_objects/modFit_rf_centreScale_repeatedcv_n10_r3_trainData.rds")
+
+rf_rcv_normalize$finalModel
+getTree(rf_rcv_normalize$finalModel)
+
+
+
+#-------------------------------------------------------------------------------
+#                                                                       BOOSTING
+#-------------------------------------------------------------------------------
+gbm_rcv_normalize = readRDS("trained_objects/modFit_gbm_center_scale_repeatedCV_n1-_r3_trainData.rds")
+
+
+
+
+# relative importance of different variables
+varImp(rf_rcv_nopp)
+varImp(rf_rcv_normalize)
 ```
+
+We can see that the three most important variables in predicting the categories 
+are roll_belt, pitch_forearm and yaw_belt.
+
+
+
+
+```{r test}
+#===============================================================================
+#                                                               TEST ON TESTDATA
+#===============================================================================
+
+#-------------------------------------------------------------------------------
+#                                                RANDOM FORREST NO PREPROCESSING
+#-------------------------------------------------------------------------------
+# Accuracy :   0.9908          
+# 95% CI :    (0.9885, 0.9928)
+# Kappa :      0.9884
+# Sensitivity            0.9982   0.9875   0.9876   0.9876   0.9889
+# Specificity            0.9971   0.9973   0.9961   0.9980   0.9998
+# Balanced Accuracy      0.9977   0.9924   0.9919   0.9928   0.9944
+
+pred <- predict(rf_rcv_nopp, testData) 
+table(pred,testData$classe)
+confusionMatrix(pred, testData$classe)
+
+#-------------------------------------------------------------------------------
+#                                                    RANDOM FORREST CENTER SCALE
+#-------------------------------------------------------------------------------
+# Accuracy :   0.9901          
+# 95% CI :    (0.9876, 0.9921)
+# Kappa :      0.9874 
+# Sensitivity            0.9973   0.9862   0.9861   0.9876   0.9889
+# Specificity            0.9968   0.9967   0.9960   0.9982   0.9998
+# Balanced Accuracy      0.9971   0.9914   0.9910   0.9929   0.9944
+
+pred <- predict(rf_rcv_normalize, testData) 
+table(pred,testData$classe)
+confusionMatrix(pred, testData$classe)
+```
+
+
+
+``` {r predict}
+newPred <- predict(rf_rcv_nopp, predictData) 
+```
+
+``` {r exploratoryPlots, dependson="filterColumns"}
+#===============================================================================
+#                                                              EXPLORATORY PLOTS
+#===============================================================================
+# library(ggplot2)
+# qplot(pitch_forearm, roll_forearm, color=classe, data=cleanData)
+# qplot(yaw_belt, roll_belt, color=classe, data=cleanData)
+# qplot(yaw_belt, magnet_dumbbell_z, color=classe, data=cleanData)
+# qplot(yaw_belt, magnet_dumbbell_y, color=classe, data=cleanData)  
+# qplot(magnet_dumbbell_z, magnet_dumbbell_y, color=classe, data=cleanData)
+# qplot(roll_belt, magnet_dumbbell_z, color=classe, data=cleanData)
+# qplot(roll_belt, magnet_dumbbell_y, color=classe, data=cleanData)  
+```
+
+
 
 ```{r}
 #===============================================================================
@@ -238,17 +342,17 @@ print(modFit3)
 #answers = c("A", "B", "A", "C", "A", "B", "A", "C", "A")
 
 #then you can load this function by copying and pasting it into R: 
-# pml_write_files = function(x){
-#   n = length(x)
-#   for(i in 1:n){
-#     filename = paste0("answers/","problem_id_",i,".txt")
-#     write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
-#   }
-# }
-# #then create a folder where you want the files to be written. 
-# # Set that to be your working directory and run:
-#  
-# pml_write_files(answers)
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("answers/","problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+#then create a folder where you want the files to be written. 
+# Set that to be your working directory and run:
+ 
+pml_write_files(newPred)
 ```
 
 
