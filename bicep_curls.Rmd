@@ -1,5 +1,5 @@
 ---
-title: "Bicep Curls"
+title: "Qualitative Activity Recognition of Bicep Curls"
 author: "Ronny Restrepo"
 date: "21/05/2015"
 output: html_document
@@ -26,63 +26,95 @@ knit_hooks$set(inline = function(x) {
 knit_hooks$set(plot = knitr:::hook_plot_html)
 ```
 
+# Introduction
+The increasing affordability and miniaturization of sensors such as 
+acceleromenters, gyroscopes, magnetometers and heart rate monitors is making it 
+increasingly possible for people to be able to record detailed information about 
+their personal activities such as sleep patterns, estimated calories burnt, 
+distances run, how many steps have been taken, etc. This has caught on as a 
+social movement known as the _quantified self movement_. Commercial devices such 
+as Fitbit, Jawbone Up, and Nike FuelBand have popularised this trend, making it 
+increasingly easy to record and analyse data on such activities. 
+
+Given that different activities require different interactions of movements 
+between different body parts, such technology potentially lends itself to also 
+being able to analyse whether particular activities are being performed 
+correctly. This is known as _Qualitative Activity Recognition_ (QAR). 
+
+This paper looks at the kind of accuracy that can be achieved from using multiple 
+sensors on the body, and equipment to predict how well a person performs a bicep 
+curl using a machine learning algorithm. 
+
+# Data
+The data used is taken from https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv which is a subset of the Weight Lifting Exercises Dataset by Velloso et al (2013) found  at http://groupware.les.inf.puc-rio.br/har . 
+
+The dataset contains 19622 rows of observations from sensors located on the 
+forearm, arm, belt, and dumbell for 6 male participants between the ages of 
+20-28 years performing bicep curls. All participants had weight lifting 
+experience and were instructed to perform bicep curls in 5 different ways. One 
+of those ways was the correct way of performing dumbell curls (Class A). The 
+other four ways were dumbell curls performed in such a way to mimick common 
+mistakes such as performing the dumbell curl by "throwing the elbows to the 
+front (Class B), lifting the dumbbell only halfway (Class C), lowering the 
+dumbbell only halfway (Class D) and throwing the hips to the front (Class E)" 
+(_Velloso et al_, 2013).
 
 
-# TIPS
-- `readRDS()` and `saveRDS()` for caching R objects such as the trained data. 
+
+
+
+
+The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is,
+
+
+#TIPS
 -  use variable Importance `varImp()` function on the trained model. It shows the most important variables. 
 - Use `myModel$results` for a summary of accuracy results
 
-```{r conveniencelibs}
-#Uncomment the following lines if you want to install 
-#   file.convenience package
-#   stat.convenience package
-#   fancyprint       package
-#library(devtools)
-#TODO: XXXX install from github code
 
-#library(file.convenience)
-#library(stat.convenience)
+# Method
 
-```
+For the purposes of this analysis, R is used for the entire pipeline, from raw 
+data to clean data, to the creation of the trained model, and for prediction of 
+new data. All code is provided in the steps below. 
 
-```{r getData, dependson=conveniencelibs}
+The first step is to download the data. 
+
+```{r getData}
 #===============================================================================
 #                                                        DOWNLOAD AND CACHE DATA
 #===============================================================================
 trainURL = "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
-predictURL = "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
 
-library(file.convenience)        # Not in CRAN, see Appendix to get this package
+# file.convenience package is not in CRAN, see Appendix A to get this package
+library(file.convenience)
 cacheDownload(trainURL, dataDir="data", localName="trainData")
-cacheDownload(predictURL, dataDir="data", localName="predictionData")
 ```
 
+Next, is to load the raw data into the R session. 
 
 ``` {r loadData, dependson="getData"}
 #===============================================================================
 #                                                                      LOAD DATA
 #===============================================================================
-na.strings = c("NA", "#DIV/0!")
-rawData = read.csv("data/trainData", na.strings=na.strings, stringsAsFactors=FALSE)
-predictData = read.csv("data/predictionData", na.strings=na.strings, 
-                   stringsAsFactors=FALSE)
+na.strings = c("NA", "#DIV/0!")    # missing values stored as "NA" and "#DIV/0!"
+rawData = read.csv("data/trainData", na.strings=na.strings, stringsAsFactors=F)
 ```
+
+Next, we look at the data for an missing values. 
 
 ```{r summary, dependson="loadData"}
 #===============================================================================
-#                                                                       SUMMARY
+#                                                      SUMMARY OF MISSING VALUES
 #===============================================================================
-# TODO: remove the detach line
-#detach("package:stat.convenience", unload=TRUE)
-library(fancyprint)              # Not in CRAN, see Appendix to get this package
-library(stat.convenience)        # Not in CRAN, see Appendix to get this package
-na.info = na.summary(rawData, only.nas=TRUE)
-nrow(na.info)
-
-#na.summary(test, only.nas=TRUE)
+library(fancyprint)            # Not in CRAN, see Appendix A to get this package
+library(stat.convenience)      # Not in CRAN, see Appendix A to get this package
+na.info = na.summary(rawData, only.nas=TRUE, printit=FALSE)
+length(na.info$proportion)
+min(na.info$proportion)
+max(na.info$proportion)
 ```
-
+A full printout of the `na.summary()` function call can be seen in Appendix B. 
 We can see from the the summary of NAs, that there are 100 columns with NAs. Out 
 of those columns, the proportion of NAs range from  
 `r round(min(na.info$proportion) * 100, digits=2)`% to 
@@ -128,6 +160,7 @@ to the test set.
 #===============================================================================
 #                                                                     SPLIT DATA
 #===============================================================================
+library(e1071)
 library(caret)
 set.seed(974)
 inTrain <- createDataPartition(y=cleanData$classe, p=0.6, list=FALSE)
@@ -136,6 +169,16 @@ testData <- cleanData[-inTrain,]
 ```
 
 Now we can train the learning algorithm. 
+
+
+TODO: use some of the colourful ggplots to show that there is some possible 
+interesting interactions between variables, and use it as a motivation for 
+using a non-linear model with complex geometries, so that a random forrest
+might be a good choice for such data. 
+
+
+Random Forrest is used, with three separate 10-fold cross-validations.
+`"repeatedcv", number = 10 and repeats = 3`
 
 ```{r}
 #===============================================================================
@@ -276,6 +319,37 @@ We can see that the three most important variables in predicting the categories
 are roll_belt, pitch_forearm and yaw_belt.
 
 
+```{r visualisations}
+#=============================================================================
+# VISUALISATIONS
+#=============================================================================
+inMini <- createDataPartition(y=trainData$classe, p=0.1, list=FALSE)
+miniData <- trainData[inMini,]
+
+featurePlot(x = miniData[, c("roll_belt", "pitch_forearm", "yaw_belt", "pitch_belt")],
+                  y = miniData[, 53],
+                  plot = "density",
+                  ## Pass in options to xyplot() to 
+                  ## make it prettier
+                  scales = list(x = list(relation="free"),
+                                y = list(relation="free")),
+                  adjust = 1.5,
+                  pch = "|",
+                  layout = c(4, 1),
+                  auto.key = list(columns = 3))
+
+
+ggplot(rf_rcv_nopp)
+featurePlot(rf_rcv_nopp)
+
+plotcp(rf_rcv_nopp)
+
+
+```
+
+We can see from the above plot that of the three parameters used for 
+Resampling: Cross-Validated (10 fold, repeated 3 times) 
+
 
 
 ```{r test}
@@ -314,7 +388,14 @@ confusionMatrix(pred, testData$classe)
 
 
 
-``` {r predict}
+```{r predict}
+
+predictURL = "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+cacheDownload(predictURL, dataDir="data", localName="predictionData")
+predictData = read.csv("data/predictionData", na.strings=na.strings, 
+                   stringsAsFactors=FALSE)
+
+
 newPred <- predict(rf_rcv_nopp, predictData) 
 ```
 
@@ -329,7 +410,8 @@ newPred <- predict(rf_rcv_nopp, predictData)
 # qplot(yaw_belt, magnet_dumbbell_y, color=classe, data=cleanData)  
 # qplot(magnet_dumbbell_z, magnet_dumbbell_y, color=classe, data=cleanData)
 # qplot(roll_belt, magnet_dumbbell_z, color=classe, data=cleanData)
-# qplot(roll_belt, magnet_dumbbell_y, color=classe, data=cleanData)  
+# qplot(roll_belt, magnet_dumbbell_y, color=classe, data=cleanData)
+
 ```
 
 
@@ -356,4 +438,40 @@ pml_write_files(newPred)
 ```
 
 
-"R version 3.2.0 (2015-04-16)"
+
+# Conclusion
+This could potentially be used as a training tool. For instance someone that is 
+learning some new exercise could receive instantaneous customised feedback 
+regarding how well their form is, and what adjustments could be made to improve. 
+
+
+# REferences
+Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
+
+Read more: http://groupware.les.inf.puc-rio.br/har#ixzz3b26ZnHZF
+
+
+# Appendix A - Installing Convenience Packages
+
+The `file.convenience`, `stat.convenience` and `fancyprint` packages are not on 
+the CRAN repository, so if you want to install them you will need to run the 
+following code: 
+
+```r
+#Uncomment the following lines if you want to install 
+#   file.convenience package
+#   stat.convenience package
+#   fancyprint       package
+#library(devtools)
+#TODO: XXXX install from github code
+
+```
+
+# Appendix B - Output of na.summary()
+
+Below is a full printout of the summary of NAs for each column in the raw data. 
+
+```{r nainfo, dependson="summary"}
+na.summary(rawData, only.nas=TRUE)
+```
+
