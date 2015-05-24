@@ -251,13 +251,14 @@ Balanced Accuracy      0.9977   0.9924   0.9919   0.9928   0.9944</code></pre>
 <div id="appendix-a---installing-convenience-packages" class="section level1">
 <h1>Appendix A - Installing Convenience Packages</h1>
 <p>The <code>file.convenience</code>, <code>stat.convenience</code> and <code>fancyprint</code> packages are not on the CRAN repository, so if you want to install them you will need to run the following code:</p>
-<pre class="r"><code>#Uncomment the following lines if you want to install 
-#   file.convenience package
-#   stat.convenience package
-#   fancyprint       package
-#library(devtools)
-#TODO: XXXX install from github code
-</code></pre>
+<pre class="r"><code># Requires the devtools package to install packages from GitHub
+#install.packages(&quot;devtools&quot;)
+library(devtools)
+
+# Install convenience functions from Github
+install_github(&quot;ronrest/fancyprint_R/fancyprint&quot;)
+install_github(&quot;ronrest/convenience_functions_R/stat.convenience&quot;)
+install_github(&quot;ronrest/convenience_functions_R/file.convenience&quot;)</code></pre>
 </div>
 <div id="appendix-b---output-of-na.summary" class="section level1">
 <h1>Appendix B - Output of na.summary()</h1>
