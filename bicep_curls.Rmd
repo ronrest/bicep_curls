@@ -41,9 +41,11 @@ between different body parts, such technology potentially lends itself to also
 being able to analyse whether particular activities are being performed 
 correctly. This is known as _Qualitative Activity Recognition_ (QAR). 
 
-This paper looks at the kind of accuracy that can be achieved from using multiple 
-sensors on the body, and equipment to predict how well a person performs a bicep 
-curl using a machine learning algorithm. 
+This paper looks at the kind of accuracy that can be achieved in detecting if a 
+person is performing a bicep curl correctly, or if they are performing one of the 
+common mistakes. It aims to do so by using data from multiple sensors on the 
+body, and equipment to make this prediction based on a model trained by a 
+machine learning algorithm. 
 
 # Data
 The data used is taken from https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv which is a subset of the Weight Lifting Exercises Dataset by Velloso et al (2013) found  at http://groupware.les.inf.puc-rio.br/har . 
@@ -59,24 +61,13 @@ front (Class B), lifting the dumbbell only halfway (Class C), lowering the
 dumbbell only halfway (Class D) and throwing the hips to the front (Class E)" 
 (_Velloso et al_, 2013).
 
-
-
-
-
-
-The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is,
-
-
-#TIPS
--  use variable Importance `varImp()` function on the trained model. It shows the most important variables. 
-- Use `myModel$results` for a summary of accuracy results
-
-
 # Method
 
 For the purposes of this analysis, R is used for the entire pipeline, from raw 
 data to clean data, to the creation of the trained model, and for prediction of 
 new data. All code is provided in the steps below. 
+
+## Download the Data
 
 The first step is to download the data. 
 
@@ -101,7 +92,8 @@ na.strings = c("NA", "#DIV/0!")    # missing values stored as "NA" and "#DIV/0!"
 rawData = read.csv("data/trainData", na.strings=na.strings, stringsAsFactors=F)
 ```
 
-Next, we look at the data for an missing values. 
+## Clean Up the Data
+We look at the data for an missing values. 
 
 ```{r summary, dependson="loadData"}
 #===============================================================================
@@ -110,20 +102,23 @@ Next, we look at the data for an missing values.
 library(fancyprint)            # Not in CRAN, see Appendix A to get this package
 library(stat.convenience)      # Not in CRAN, see Appendix A to get this package
 na.info = na.summary(rawData, only.nas=TRUE, printit=FALSE)
-length(na.info$proportion)
-min(na.info$proportion)
-max(na.info$proportion)
+length(na.info$proportion)     # Number of columns with NAs
+min(na.info$proportion)        # Min Proportion of NAs in columns
+max(na.info$proportion)        # Max proportion of NAs in columns
 ```
-A full printout of the `na.summary()` function call can be seen in Appendix B. 
-We can see from the the summary of NAs, that there are 100 columns with NAs. Out 
-of those columns, the proportion of NAs range from  
-`r round(min(na.info$proportion) * 100, digits=2)`% to 
-`r round(max(na.info$proportion) * 100, digits=2)`% of the rows. This means it 
-is not really worth keeping those columns in the dataset, so we keep a subset of 
-the columns that dont have any NAs. 
 
-There are some aditional columns that are not much use to us as predictor 
-variables, so they are filtered also. 
+
+A full printout of the `na.summary()` function call can be seen in Appendix B. 
+We can see from the the summary of information regarding missing values that 
+there are 100 columns with missing data. Out of these columns with missing 
+values, at least `r round(min(na.info$proportion) * 100, digits=2)`% of the 
+values are missing, and for some columns, 
+`r round(max(na.info$proportion) * 100, digits=2)`% of the data is missing. This 
+means it is not really worth keeping any of those columns in the dataset, so we 
+create a subset of the columns that dont have any NAs. 
+
+There are also some aditional aditional columns that are not much use to us as 
+predictor variables, so they are also filtered out. 
 
 ```{r filterColumns, dependson="loadData"}
 #===============================================================================
@@ -140,7 +135,6 @@ column_filter <- c(column_filter, "X", "user_name", "raw_timestamp_part_1",
 # Actually filter out the columns using the filter
 # filter.columns() is in the stat.convenience package
 cleanData <- filter.columns(rawData, column_filter, method="list", exclude=TRUE)
-predictData <- filter.columns(predictData, column_filter, method="list", exclude=TRUE)
 
 # Convert the class column to factor type
 cleanData$classe <- as.factor(cleanData$classe)
@@ -150,13 +144,14 @@ What we end up with is `r ncol(cleanData)` columns. `r ncol(cleanData) - 1` of
 them to be used as predictor variables, and the column labelled `classe` 
 provides the labels to be used in training the learning algorithm. 
 
+
+## Train the Machine Learning Algorithm
+
 Now that the data has been cleaned up a bit, we can split the data into a 
-training and test set. 60% of the data is assigned to the training set, and 40% 
-to the test set. 
+training and test set for the learning algorithm. 60% of the data is assigned to 
+the training set, and 40% to the test set. 
 
-
-
-```{r splitData}
+```{r splitData, dependson="filterColumns"}
 #===============================================================================
 #                                                                     SPLIT DATA
 #===============================================================================
@@ -168,287 +163,108 @@ trainData <- cleanData[inTrain,]
 testData <- cleanData[-inTrain,]
 ```
 
-Now we can train the learning algorithm. 
+Now we can train the machine learning algorithm. A Random Forrest is used with 
+three separate 10-fold cross-validations. Note that this training process may 
+take a few hours to run. Also note that the code below has been configured to 
+run with parallel processing, using 2 threads on a multi-core processor. Given 8 
+Gigabytes of RAM, and given the sze of this training set, this was about as many 
+threads that could be used without overflowing RAM and spilling into Swap memory. 
 
-
-TODO: use some of the colourful ggplots to show that there is some possible 
-interesting interactions between variables, and use it as a motivation for 
-using a non-linear model with complex geometries, so that a random forrest
-might be a good choice for such data. 
-
-
-Random Forrest is used, with three separate 10-fold cross-validations.
-`"repeatedcv", number = 10 and repeats = 3`
-
-```{r}
+```{r train, dependson="splitData"}
 #===============================================================================
 #                                                                     TRAIN DATA
 #===============================================================================
+#-------------------------------------------------------------------------
+#                                                      Parallel Processing 
+#-------------------------------------------------------------------------
+numThreads = 2
 #Uncomment to set number of cores in Revolution R
 #library(RevoUtilsMath)
-#setMKLthreads(2)
+#setMKLthreads(numThreads)
 
 #install.packages("doParallel")
 library(doParallel)
-
-
-
-
-################################################################################
-#                                                                      FINALISTS
-################################################################################
-#=========================================================================
-#                                    gbm, center&scale, repeatedcv n10, r3
-#                                                   TRYING NOW ON TESTDATA                                                                      
-library("gbm")
 registerDoParallel(cores=2)
-# cores=8     miniTrain  elapsed=   29.840
-# cores=2     miniTrain2 elapsed=   59.200
-# cores=2     trainData  elapsed=   782.468
 
-system.time({
-    tc <- trainControl(method="repeatedcv", number=10, repeats=3)
-    modFit3 <- train(classe ~ ., method="gbm", verbose=FALSE,
-                    preProcess=c("center","scale"), trControl=tc, 
-                    data=trainData)
-})
-print(modFit3)
-# miniTrain    preprocess= center,scale  Accuracy   0.7240634 - 0.9009502
-# miniTrain2   preprocess= center,scale  Accuracy   0.7498513 - 0.9289771
-# trainData    preprocess= center,scale  Accuracy   0.7544986 - 0.9606821
-#saveRDS(modFit3, "modFit_gbm_center_scale_repeatedCV_n1-_r3_trainData.rds")
-#=========================================================================
-
-#=========================================================================
+#-------------------------------------------------------------------------
 #                        Random Forrest, no preprocess, repeatedcv n10, r3 
-#                                                              PRETTY GOOD
-registerDoParallel(cores=2)
-# cores=8     miniTrain  elapsed=   72.190
-# cores=8     miniTrain2 elapsed=  194.933
-# cores=8     miniTrain4 elapsed=  269.738      with n=5
-# cores=8     miniTrain4 elapsed=  652.625      with n=10
-# cores=2     trainData  elapsed=  6756.159     
+#-------------------------------------------------------------------------
+# Cache the trained model in a subdirectory
+modelCacheDir = "trained_objects"
+modelCache = "trained_objects/modFit_rf_noPreproc_repeatedCv_n10_r3_trainData.rds"
 
-
-system.time({
-    tc <- trainControl(method="repeatedcv", number=10, repeats=3)
-    modFit3 <- train(classe ~ ., method="rf", prox=TRUE,  trControl=tc, 
-                     data=trainData)
-})
-print(modFit3)
-# miniTrain    preprocess= NA  Accuracy   0.9053133  - 0.9078660
-# miniTrain2   preprocess= NA  Accuracy   0.9468010  - 0.9469440
-# miniTrain4   preprocess= NA  Accuracy   0.9643448  - 0.9695097  with n=5
-# miniTrain4   preprocess= NA  Accuracy   0.9687342  - 0.9743236  with n=10
-# trainData    preprocess= NA  Accuracy   0.9856776  - 0.9907160  kappa=0.9882559
-
-#saveRDS(modFit3, "modFit_rf_noPreproc_repeatedCv_n10_r3_trainData.rds")
-#=========================================================================
-
-#=========================================================================
-#                      Random Forrest, center&scale, repeatedcv n10, r3
-registerDoParallel(cores=2)
-# cores=8     miniTrain  elapsed=   77.471
-# cores=8     miniTrain2 elapsed=  203.801
-# cores=2     trainData  elapsed=  5855.466
-# 
-set.seed(473)
-system.time({
-    tc <- trainControl(method="repeatedcv", number=10, repeats=3)
-    modFit3 <- train(classe ~ ., method="rf", prox=TRUE, 
-                     preProcess=c("center","scale"), trControl=tc, 
-                     data=trainData)
-})
-print(modFit3)
-# miniTrain    preprocess= center,scale  Accuracy   0.8996508  - 0.9089277
-# miniTrain2   preprocess= center,scale  Accuracy   0.9470743  - 0.9548542
-# trainData   preprocess= center,scale  Accuracy   0.9844323  - 0.9905175
-
-#saveRDS(modFit3, "modFit_rf_centreScale_repeatedcv_n10_r3_trainData.rds")
-#=========================================================================
-
-
-
-
-
-
-
-#myfile = cacheprocess("filename", funct, ...)
-
-
-
-
-
-
-#-------------------------------------------------------------------------------
-#                                                RANDOM FORREST NO PREPROCESSING
-#-------------------------------------------------------------------------------
-# Accuracy    0.9907160
-# Kappa       0.9882559
-rf_rcv_nopp = readRDS("trained_objects/modFit_rf_noPreproc_repeatedCv_n10_r3_trainData.rds")
-
-rf_rcv_nopp$finalModel
-
-
-#-------------------------------------------------------------------------------
-#                                                    RANDOM FORREST CENTER SCALE
-#-------------------------------------------------------------------------------
-# Accuracy   0.9905175
-# Kappa      0.9880041
-rf_rcv_normalize = readRDS("trained_objects/modFit_rf_centreScale_repeatedcv_n10_r3_trainData.rds")
-
-rf_rcv_normalize$finalModel
-getTree(rf_rcv_normalize$finalModel)
-
-
-
-#-------------------------------------------------------------------------------
-#                                                                       BOOSTING
-#-------------------------------------------------------------------------------
-gbm_rcv_normalize = readRDS("trained_objects/modFit_gbm_center_scale_repeatedCV_n1-_r3_trainData.rds")
-
-
-
-
-# relative importance of different variables
-varImp(rf_rcv_nopp)
-varImp(rf_rcv_normalize)
-```
-
-We can see that the three most important variables in predicting the categories 
-are roll_belt, pitch_forearm and yaw_belt.
-
-
-```{r visualisations}
-#=============================================================================
-# VISUALISATIONS
-#=============================================================================
-inMini <- createDataPartition(y=trainData$classe, p=0.1, list=FALSE)
-miniData <- trainData[inMini,]
-
-featurePlot(x = miniData[, c("roll_belt", "pitch_forearm", "yaw_belt", "pitch_belt")],
-                  y = miniData[, 53],
-                  plot = "density",
-                  ## Pass in options to xyplot() to 
-                  ## make it prettier
-                  scales = list(x = list(relation="free"),
-                                y = list(relation="free")),
-                  adjust = 1.5,
-                  pch = "|",
-                  layout = c(4, 1),
-                  auto.key = list(columns = 3))
-
-
-ggplot(rf_rcv_nopp)
-featurePlot(rf_rcv_nopp)
-
-plotcp(rf_rcv_nopp)
-
-
-```
-
-We can see from the above plot that of the three parameters used for 
-Resampling: Cross-Validated (10 fold, repeated 3 times) 
-
-
-
-```{r test}
-#===============================================================================
-#                                                               TEST ON TESTDATA
-#===============================================================================
-
-#-------------------------------------------------------------------------------
-#                                                RANDOM FORREST NO PREPROCESSING
-#-------------------------------------------------------------------------------
-# Accuracy :   0.9908          
-# 95% CI :    (0.9885, 0.9928)
-# Kappa :      0.9884
-# Sensitivity            0.9982   0.9875   0.9876   0.9876   0.9889
-# Specificity            0.9971   0.9973   0.9961   0.9980   0.9998
-# Balanced Accuracy      0.9977   0.9924   0.9919   0.9928   0.9944
-
-pred <- predict(rf_rcv_nopp, testData) 
-table(pred,testData$classe)
-confusionMatrix(pred, testData$classe)
-
-#-------------------------------------------------------------------------------
-#                                                    RANDOM FORREST CENTER SCALE
-#-------------------------------------------------------------------------------
-# Accuracy :   0.9901          
-# 95% CI :    (0.9876, 0.9921)
-# Kappa :      0.9874 
-# Sensitivity            0.9973   0.9862   0.9861   0.9876   0.9889
-# Specificity            0.9968   0.9967   0.9960   0.9982   0.9998
-# Balanced Accuracy      0.9971   0.9914   0.9910   0.9929   0.9944
-
-pred <- predict(rf_rcv_normalize, testData) 
-table(pred,testData$classe)
-confusionMatrix(pred, testData$classe)
-```
-
-
-
-```{r predict}
-
-predictURL = "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
-cacheDownload(predictURL, dataDir="data", localName="predictionData")
-predictData = read.csv("data/predictionData", na.strings=na.strings, 
-                   stringsAsFactors=FALSE)
-
-
-newPred <- predict(rf_rcv_nopp, predictData) 
-```
-
-``` {r exploratoryPlots, dependson="filterColumns"}
-#===============================================================================
-#                                                              EXPLORATORY PLOTS
-#===============================================================================
-# library(ggplot2)
-# qplot(pitch_forearm, roll_forearm, color=classe, data=cleanData)
-# qplot(yaw_belt, roll_belt, color=classe, data=cleanData)
-# qplot(yaw_belt, magnet_dumbbell_z, color=classe, data=cleanData)
-# qplot(yaw_belt, magnet_dumbbell_y, color=classe, data=cleanData)  
-# qplot(magnet_dumbbell_z, magnet_dumbbell_y, color=classe, data=cleanData)
-# qplot(roll_belt, magnet_dumbbell_z, color=classe, data=cleanData)
-# qplot(roll_belt, magnet_dumbbell_y, color=classe, data=cleanData)
-
-```
-
-
-
-```{r}
-#===============================================================================
-#                                                                 EXPORT ANSWERS
-#===============================================================================
-#answers = rep("A", 20)
-#answers = c("A", "B", "A", "C", "A", "B", "A", "C", "A")
-
-#then you can load this function by copying and pasting it into R: 
-pml_write_files = function(x){
-  n = length(x)
-  for(i in 1:n){
-    filename = paste0("answers/","problem_id_",i,".txt")
-    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
-  }
+if(!file.exists(modelCacheDir)){
+    dir.create(modelCacheDir)
 }
-#then create a folder where you want the files to be written. 
-# Set that to be your working directory and run:
- 
-pml_write_files(newPred)
+if(!file.exists(modelCache)){
+    set.seed(473)
+    tc <- trainControl(method="repeatedcv", number=10, repeats=3)
+    trainedModel <- train(classe ~ ., method="rf", prox=TRUE,  trControl=tc, 
+                      data=trainData)
+    saveRDS(trainedModel, modelCache)
+}else{
+    trainedModel = readRDS(modelCache)
+}
 ```
 
+
+## Summary of Model
+The training process performed 10-fold cross validation on three separate models. 
+The model  with the greatest accuracy achieved an estimated accuracy of 99.07% 
+and estimated Kappa of 98.83%. 
+
+``` {r trainSummaryMini, dependson="train"}
+trainedModel$results
+```
+
+See _Appendix C_ for a more complete printout summary of the different models. 
+
+The three most important variables in predicting the categories are `roll_belt`, 
+`pitch_forearm` and `yaw_belt`. The printout of the 20 most important variables 
+can be seen in _Appendix D_.
+
+
+## Testing the Model
+
+K-fold cross validation does a good job at predicting the out of sample accuracy 
+but, it is always best to test the model with completely new data that it has not 
+encountered just to ensure it has not overfitted to the training set. Previously, 
+40% of the data was set asside as a test set. This will be used to test how well 
+our trained model actually does on new data. 
+
+```{r test, dependson="train"}
+#===============================================================================
+#                                                        APPLY MODEL TO TEST SET
+#===============================================================================
+pred <- predict(trainedModel, testData) 
+```
+
+The confusion matrix below tells us that the predicted out of sample accuracy for 
+our trained model is indeed was indeed fairly accurate. The model had predicted 
+an accuracy of 99.07% and estimated Kappa of 98.83%. On the new data we get an 
+accuracy of 99.1%, and kappa of 98.86%. 
+
+```{r confuseMatrix, dependson="test"}
+confusionMatrix(pred, testData$classe)
+```
 
 
 # Conclusion
-This could potentially be used as a training tool. For instance someone that is 
+
+The trained model performs very well however, the data is only from 6 
+participants, all of which have had weight lifting experience. It would be 
+good to see larger amount of data recorded for a wider set of participants at 
+different skill levels to both evaluate the true accuracy of such a model, or 
+to train it further so that it generalises to the general population. 
+
+A potential application of this kind of Qualitative Activity Recognition could 
+be as a training tool. For instance, someone that is 
 learning some new exercise could receive instantaneous customised feedback 
 regarding how well their form is, and what adjustments could be made to improve. 
 
 
-# REferences
-Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
-
-Read more: http://groupware.les.inf.puc-rio.br/har#ixzz3b26ZnHZF
+# References
+- Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
 
 
 # Appendix A - Installing Convenience Packages
@@ -473,5 +289,19 @@ Below is a full printout of the summary of NAs for each column in the raw data.
 
 ```{r nainfo, dependson="summary"}
 na.summary(rawData, only.nas=TRUE)
+```
+
+
+# Appendix C - Summary of Trained Models
+
+```{r summaryModel, dependson="train"}
+print(trainedModel)
+```
+
+# Appendix D - 20 Most Important Predictive Variables
+
+```{r varImp, dependson="train"}
+# relative importance of different variables
+varImp(trainedModel)
 ```
 
