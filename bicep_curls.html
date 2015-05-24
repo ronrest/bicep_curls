@@ -186,7 +186,7 @@ if(!file.exists(modelCache)){
 </div>
 <div id="summary-of-model" class="section level2">
 <h2>Summary of Model</h2>
-<p>The training process performed 10-fold cross validation on three separate models. The model with the greatest accuracy achieved an estimated accuracy of 99.07% and estimated Kappa of 98.83%.</p>
+<p>The training process performed 10-fold cross validation on three separate models. The model with the greatest accuracy achieved an estimated accuracy of 99.07% (est. error rate of 0.93%).</p>
 <pre class="r"><code>trainedModel$results</code></pre>
 <pre><code>  mtry  Accuracy     Kappa  AccuracySD     KappaSD
 1    2 0.9896972 0.9869657 0.002496846 0.003160123
@@ -202,7 +202,7 @@ if(!file.exists(modelCache)){
 #                                                        APPLY MODEL TO TEST SET
 #===============================================================================
 pred &lt;- predict(trainedModel, testData) </code></pre>
-<p>The confusion matrix below tells us that the predicted out of sample accuracy for our trained model is indeed was indeed fairly accurate. The model had predicted an accuracy of 99.07% and estimated Kappa of 98.83%. On the new data we get an accuracy of 99.1%, and kappa of 98.86%.</p>
+<p>The confusion matrix below tells us that the predicted out of sample accuracy for our trained model is indeed was indeed fairly accurate. The model had predicted an accuracy of 99.07% (est. error rate of 0.93%). On the new data we get an observed out of sample accuracy of 99.08% (error rate of 0.92%).</p>
 <pre class="r"><code>confusionMatrix(pred, testData$classe)</code></pre>
 <pre><code>Confusion Matrix and Statistics
 

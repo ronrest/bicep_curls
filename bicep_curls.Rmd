@@ -211,7 +211,7 @@ if(!file.exists(modelCache)){
 ## Summary of Model
 The training process performed 10-fold cross validation on three separate models. 
 The model  with the greatest accuracy achieved an estimated accuracy of 99.07% 
-and estimated Kappa of 98.83%. 
+(est. error rate of 0.93%). 
 
 ``` {r trainSummaryMini, dependson="train"}
 trainedModel$results
@@ -241,8 +241,8 @@ pred <- predict(trainedModel, testData)
 
 The confusion matrix below tells us that the predicted out of sample accuracy for 
 our trained model is indeed was indeed fairly accurate. The model had predicted 
-an accuracy of 99.07% and estimated Kappa of 98.83%. On the new data we get an 
-accuracy of 99.1%, and kappa of 98.86%. 
+an accuracy of 99.07% (est. error rate of 0.93%). On the new data we get an 
+observed out of sample accuracy of 99.08% (error rate of 0.92%). 
 
 ```{r confuseMatrix, dependson="test"}
 confusionMatrix(pred, testData$classe)
