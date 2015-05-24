@@ -274,13 +274,14 @@ the CRAN repository, so if you want to install them you will need to run the
 following code: 
 
 ```r
-#Uncomment the following lines if you want to install 
-#   file.convenience package
-#   stat.convenience package
-#   fancyprint       package
-#library(devtools)
-#TODO: XXXX install from github code
+# Requires the devtools package to install packages from GitHub
+#install.packages("devtools")
+library(devtools)
 
+# Install convenience functions from Github
+install_github("ronrest/fancyprint_R/fancyprint")
+install_github("ronrest/convenience_functions_R/stat.convenience")
+install_github("ronrest/convenience_functions_R/file.convenience")
 ```
 
 # Appendix B - Output of na.summary()
